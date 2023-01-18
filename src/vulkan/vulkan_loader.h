@@ -30,8 +30,8 @@ namespace dxvk::vk {
     PFN_vkVoidFunction sym(const char* name) const;
     bool               valid() const;
   protected:
-    const HMODULE                   m_library;
-    const PFN_vkGetInstanceProcAddr m_getInstanceProcAddr;
+    HMODULE                   m_library             = nullptr;
+    PFN_vkGetInstanceProcAddr m_getInstanceProcAddr = nullptr;
   };
   
   
