@@ -7,6 +7,19 @@
 #include "../util_bit.h"
 #include "../util_likely.h"
 
+#if defined(_MSC_VER)
+    #include <intrin.h>
+    #define cpu_pause() YieldProcessor()
+#elif defined(__x86_64__) || defined(__i386__)
+    #include <immintrin.h>
+    #define cpu_pause() _mm_pause()
+#elif defined(__aarch64__) || defined(__arm__)
+    #define cpu_pause() __asm__ __volatile__("yield" ::: "memory")
+#else
+    // Fallback for unknown architecture
+    #define cpu_pause() ((void)0)
+#endif
+
 namespace dxvk::sync {
 
   /**
@@ -21,7 +34,7 @@ namespace dxvk::sync {
   void spin(uint32_t spinCount, const Fn& fn) {
     while (unlikely(!fn())) {
       for (uint32_t i = 1; i < spinCount; i++) {
-        _mm_pause();
+        cpu_pause();
         if (fn())
           return;
       }

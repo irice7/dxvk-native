@@ -1,16 +1,11 @@
 #pragma once
 
-#ifndef _MSC_VER
-#if defined(__WINE__) && defined(__clang__)
-#pragma push_macro("_WIN32")
-#undef _WIN32
-#endif
-#include <x86intrin.h>
-#if defined(__WINE__) && defined(__clang__)
-#pragma pop_macro("_WIN32")
-#endif
-#else
+#if defined(__ARM_NEON) || defined(__ARM_NEON__) || defined(_M_ARM64) || defined(_M_ARM)
+#include <arm_neon.h>
+#elif _MSC_VER
 #include <intrin.h>
+#elif defined(__x86_64__) || defined(__i386__)
+#include <immintrin.h>
 #endif
 
 #include "util_likely.h"
@@ -53,18 +48,8 @@ namespace dxvk::bit {
   inline uint32_t tzcnt(uint32_t n) {
     #if defined(_MSC_VER) && !defined(__clang__)
     return _tzcnt_u32(n);
-    #elif defined(__BMI__)
-    return __tzcnt_u32(n);
     #elif defined(__GNUC__) || defined(__clang__)
-    uint32_t res;
-    uint32_t tmp;
-    asm (
-      "mov  $32, %1;"
-      "bsf   %2, %0;"
-      "cmovz %1, %0;"
-      : "=&r" (res), "=&r" (tmp)
-      : "r" (n));
-    return res;
+    return (n == 0) ? 32 : __builtin_ctz(n);
     #else
     uint32_t r = 31;
     n &= -n;
@@ -143,18 +128,12 @@ namespace dxvk::bit {
    */
   template<typename T>
   bool bcmpeq(const T* a, const T* b) {
-    static_assert(alignof(T) >= 16);
-    #if defined(__GNUC__) || defined(__clang__) || defined(_MSC_VER)
+    static_assert(alignof(T) >= 16, "Type must be aligned to at least 16 bytes");
+#if defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__) || defined(_MSC_VER))
     auto ai = reinterpret_cast<const __m128i*>(a);
     auto bi = reinterpret_cast<const __m128i*>(b);
 
     size_t i = 0;
-
-    #if defined(__clang__)
-    #pragma nounroll
-    #elif defined(__GNUC__)
-    #pragma GCC unroll 0
-    #endif
 
     for ( ; i < 2 * (sizeof(T) / 32); i += 2) {
       __m128i eq0 = _mm_cmpeq_epi8(
@@ -181,9 +160,9 @@ namespace dxvk::bit {
     }
 
     return true;
-    #else
-    return !std::memcmp(a, b, sizeof(T));
-    #endif
+#else
+    return std::memcmp(a, b, sizeof(T)) == 0;
+#endif
   }
 
   template <size_t Bits>

@@ -151,10 +151,18 @@ namespace dxvk {
 
   inline Vector4 replaceNaN(Vector4 a) {
     Vector4 result;
+#if defined(__ARM_NEON) || defined(__ARM_NEON__) || defined(_M_ARM64)
+    float32x4_t val = vld1q_f32(a.data);
+    uint32x4_t mask = vceqq_f32(val, val);
+    float32x4_t res = vreinterpretq_f32_u32(vandq_u32(vreinterpretq_u32_f32(val), mask));
+    vst1q_f32(result.data, res);
+#else
     __m128 value = _mm_load_ps(a.data);
     __m128 mask  = _mm_cmpeq_ps(value, value);
            value = _mm_and_ps(value, mask);
     _mm_store_ps(result.data, value);
+#endif
+
     return result;
   }
 
