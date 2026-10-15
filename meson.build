@@ -52,7 +52,7 @@ endif
 
 dxvk_include_path = include_directories('./include')
 
-if (cpu_family == 'x86_64')
+if (cpu_family == 'x86_64' or cpu_family == 'aarch64')
   dxvk_library_path = meson.source_root() + '/lib'
 else
   dxvk_library_path = meson.source_root() + '/lib32'
@@ -76,7 +76,7 @@ if not dxvk_native
     elif cpu_family == 'x86'
       wrc = find_program('i686-w64-mingw32-windres')
     else
-      error('Unsupported target architecture')
+      error('Unsupported target architecture. (NOTE: Only DXVK native is supported for Android target')
     endif
   endif
 
@@ -122,7 +122,9 @@ else
 
   dxvk_wsi      = get_option('dxvk_native_wsi')
   dxvk_platform = target_machine.system()
+  message('Platform : @0@'.format(dxvk_platform))
 
+  # TODO aarch64 simd flags?
   if cpu_family == 'x86'
     if dxvk_compiler.has_argument('-msse') and dxvk_compiler.has_argument('-msse2')
       add_project_arguments('-msse', '-msse2', language: 'c')
@@ -142,7 +144,8 @@ else
     dxvk_include_path = include_directories('./include', './include/native/', './include/native/windows', './include/native/directx')
     lib_vulkan  = dxvk_compiler.find_library('vulkan')
     lib_sdl2    = dxvk_compiler.find_library('SDL2')
-    wrc = find_program('echo')
+
+    wrc = find_program('echo', required : false)
     so_prefix = 'libdxvk_'
   endif
 
@@ -169,9 +172,18 @@ if dxvk_is_msvc
   output    : [ '@BASENAME@' + res_ext ],
   arguments : [ '/fo', '@OUTPUT@', '@INPUT@' ])
 elif dxvk_native
-  wrc_generator = generator(wrc,
-  output    : [ '@BASENAME@_ignored.h' ],
-  arguments : [ 'Ignoring: ', '@INPUT@' ])
+  # TODO temporary hack
+  if not wrc.found()
+    py = import('python').find_installation()
+    wrc_generator = generator(py,
+    output    : [ '@BASENAME@_ignored.h' ],
+    arguments : [ '-c', 'print("Ignoring: @INPUT@")'])
+
+  else
+    wrc_generator = generator(wrc,
+    output    : [ '@BASENAME@_ignored.h' ],
+    arguments : [ 'Ignoring: ', '@INPUT@' ])
+  endif
 else
   wrc_generator = generator(wrc,
   output    : [ '@BASENAME@' + res_ext ],

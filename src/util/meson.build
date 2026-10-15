@@ -33,10 +33,19 @@ util_src_linux = [
   'platform/thread_native.cpp',
 ]
 
+util_src_android = [
+  'platform/util_luid_android.cpp',
+  'platform/util_env_android.cpp',
+  'platform/util_string_android.cpp',
+  'platform/thread_native.cpp',
+]
+
 if dxvk_platform == 'windows'
   util_src += util_src_win32
 elif dxvk_platform == 'linux'
   util_src += util_src_linux
+elif dxvk_platform == 'android'
+  util_src += util_src_android
 else
   error('Unknown platform for util')
 endif
