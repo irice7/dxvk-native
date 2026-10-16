@@ -470,7 +470,7 @@ namespace dxvk {
     }
 
     if (vr != VK_SUCCESS)
-      throw DxvkError("DxvkAdapter: Failed to create device");
+      throw DxvkError(str::format("DxvkAdapter: Failed to create device: ", vr));
     
     Rc<DxvkDevice> result = new DxvkDevice(instance, this,
       new vk::DeviceFn(m_vki, true, device),
