@@ -14,7 +14,10 @@ else
   dxvk_cpp_std='c++17'
 endif
 
-dxvk_native = (not meson.is_cross_build() and not dxvk_is_msvc) or get_option('dxvk_native_force')
+dxvk_native = not dxvk_is_msvc or get_option('dxvk_native_force')
+if dxvk_native
+  message('Configuring DXVK native')
+endif
 
 if dxvk_is_msvc
   add_project_arguments('/std:' + dxvk_cpp_std, language : 'cpp')
@@ -27,6 +30,13 @@ if dxvk_compiler.get_id() == 'clang'
   if dxvk_compiler.has_argument('-Wno-microsoft-exception-spec')
     add_project_arguments('-Wno-microsoft-exception-spec', language: 'cpp')
   endif
+
+  args = [
+    '-Wno-deprecated-declarations',
+    '-Wno-missing-braces',
+    '-Wno-extern-c-compat'
+  ]
+  add_project_arguments(dxvk_compiler.get_supported_arguments(args), language: 'cpp')
 endif
 
 if not dxvk_is_msvc
@@ -40,6 +50,23 @@ if not dxvk_is_msvc
   # work properly as well as avoiding a memcpy from the Wine loader.
   if dxvk_compiler.has_link_argument('-Wl,--file-alignment=4096')
     add_global_link_arguments('-Wl,--file-alignment=4096', language: 'cpp')
+  endif
+
+  # Make the linker bind symbol references to its own definition first
+  # Fixes problems in the case where the executable overrides globally 
+  # replaceable functions from libc++ (which is marked weak), DXVK native would
+  # instead use the definitions from the statically linked libc++
+  # For example global constructors could heap allocate before the override is
+  # even initialized by the executable, and therefore cause a null dereference
+  # However in Android, this doesn't seem to work. It still leaves the weak
+  # symbols interposable and does not bind references to global symbols to its
+  # internal definitions.
+  # TODO Look into this more later
+  if dxvk_compiler.has_link_argument('-Wl,-Bsymbolic')
+    add_global_link_arguments('-Wl,-Bsymbolic', language: 'cpp')
+  endif
+  if dxvk_compiler.has_link_argument('-Wl,-Bsymbolic-functions')
+    add_global_link_arguments('-Wl,-Bsymbolic-functions', language: 'cpp')
   endif
 
   # Wine's built-in back traces only work with dwarf2 symbols
