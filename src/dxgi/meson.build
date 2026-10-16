@@ -1,5 +1,10 @@
 dxgi_res = wrc_generator.process('version.rc')
 
+dxgi_map = meson.current_source_dir() + '/dxgi.map'
+dxgi_link_args = [
+  '-Wl,--version-script=' + dxgi_map
+]
+
 dxgi_src = [
   'dxgi_adapter.cpp',
   'dxgi_enums.cpp',
@@ -17,6 +22,7 @@ dxgi_dll = shared_library(so_prefix+'dxgi'+dll_ext, dxgi_src, dxgi_res,
   dependencies        : [ dxvk_dep, wsi_dep ],
   include_directories : dxvk_include_path,
   install             : true,
+  link_args           : dxgi_link_args,
   vs_module_defs      : 'dxgi'+def_spec_ext,
   override_options    : ['cpp_std='+dxvk_cpp_std])
 

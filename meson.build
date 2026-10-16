@@ -53,7 +53,7 @@ if not dxvk_is_msvc
   endif
 
   # Make the linker bind symbol references to its own definition first
-  # Fixes problems in the case where the executable overrides globally 
+  # Fixes problems in the case where the executable overrides globally
   # replaceable functions from libc++ (which is marked weak), DXVK native would
   # instead use the definitions from the statically linked libc++
   # For example global constructors could heap allocate before the override is
@@ -68,6 +68,11 @@ if not dxvk_is_msvc
   if dxvk_compiler.has_link_argument('-Wl,-Bsymbolic-functions')
     add_global_link_arguments('-Wl,-Bsymbolic-functions', language: 'cpp')
   endif
+  if dxvk_compiler.has_link_argument('-Wl,--exclude-libs,ALL')
+    add_global_link_arguments('-Wl,--exclude-libs,ALL', language: ['c', 'cpp'])
+  endif
+  # WORKAROUND
+  add_global_link_arguments('-Wl,--whole-archive', '-l:libc++abi.a', '-Wl,--no-whole-archive', language: ['c', 'cpp'])
 
   # Wine's built-in back traces only work with dwarf2 symbols
   if get_option('debug') and target_machine.system() == 'windows'

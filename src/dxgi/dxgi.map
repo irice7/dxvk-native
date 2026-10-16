@@ -1,0 +1,10 @@
+{
+    global:
+        CreateDXGIFactory;
+        CreateDXGIFactory1;
+        CreateDXGIFactory2;
+        DXGIDeclareAdapterRemovalSupport;
+        DXGIGetDebugInterface1;
+    local:
+        *;
+};
